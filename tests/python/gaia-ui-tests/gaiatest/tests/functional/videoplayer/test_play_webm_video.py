@@ -20,6 +20,9 @@ class TestPlayWebMVideo(GaiaTestCase):
 
         video_player = VideoPlayer(self.marionette)
         video_player.launch()
+        video_player.wait_for_progress_bar_visible()
+        self.assertTrue(video_player.progress_bar_is_visible)
+        video_player.wait_for_progress_bar_not_visible()
 
         # Assert that there is at least one video available
         self.assertGreater(video_player.total_video_count, 0)
