@@ -13,7 +13,7 @@ class VideoPlayer(Base):
     _progress_bar_locator = (By.ID, 'throbber')
 
     # Video list/summary view
-    _video_items_locator = (By.CSS_SELECTOR, '.thumbnail')
+    _video_items_locator = (By.CSS_SELECTOR, '#thumbnails > li')
     _video_name_locator = (By.CSS_SELECTOR, 'div.details')
 
     _empty_video_title_locator = (By.ID, 'overlay-title')
@@ -22,14 +22,8 @@ class VideoPlayer(Base):
     def launch(self):
         Base.launch(self)
 
-    def wait_for_progress_bar_visible(self):
+    def wait_for_progress_bar_complete(self):
         self.wait_for_element_displayed(*self._progress_bar_locator)
-
-    @property
-    def progress_bar_is_visible(self):
-        return self.is_element_displayed(*self._progress_bar_locator)
-
-    def wait_for_progress_bar_not_visible(self):
         self.wait_for_element_not_displayed(*self._progress_bar_locator)
 
     @property
