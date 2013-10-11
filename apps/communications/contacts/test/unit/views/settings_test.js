@@ -1,5 +1,6 @@
 require('/shared/js/lazy_loader.js');
-require('/shared/test/unit/load_body_html_helper.js');
+requireElements('communications/contacts/elements/settings.html');
+require('/shared/test/unit/mocks/mock_navigator_moz_settings.js');
 requireApp('communications/contacts/test/unit/mock_contacts.js');
 requireApp('communications/contacts/test/unit/mock_asyncstorage.js');
 requireApp('communications/contacts/test/unit/mock_fb.js');
@@ -56,8 +57,9 @@ suite('Contacts settings', function() {
     return nfn;
   }
 
+  suiteTemplate('settings');
+
   suiteSetup(function() {
-    loadBodyHTML('/contacts/index.html');
     mocksHelper.suiteSetup();
     real_ = window._;
     if (!window.utils) {
@@ -83,7 +85,7 @@ suite('Contacts settings', function() {
   });
 
   suite('Export options', function() {
-    suiteSetup(function() {
+    setup(function() {
       utils.sdcard.checkStorageCard = function() { return true; };
       contacts.Settings.init();
       mocksHelper.suiteSetup();
@@ -153,10 +155,13 @@ suite('Contacts settings', function() {
   });
 
   suite('Timestamp Import', function() {
+
+    suiteTemplate('settings');
+
     var gmailTime = Date.now();
     var liveTime = Date.now() - 24 * 60 * 60 * 1000;
 
-    suiteSetup(function() {
+    setup(function() {
       contacts.Settings.init();
 
       MockasyncStorage.setItem('gmail_last_import_timestamp', gmailTime);
@@ -191,8 +196,89 @@ suite('Contacts settings', function() {
 
     });
 
-    suiteTeardown(function() {
+    teardown(function() {
       MockasyncStorage.clear();
+    });
+  });
+
+  suite('SD Export when UMS enabled', function() {
+    var realSettings = navigator.mozSettings;
+    var importSDButton = exportSDButton = null;
+    var checkForCard;
+
+    suiteSetup(function() {
+      checkForCard = utils.sdcard.checkStorageCard;
+      utils.sdcard.checkStorageCard = function() { return true; };
+      navigator.mozSettings = MockNavigatorSettings;
+    });
+
+    suiteTeardown(function() {
+      navigator.mozSettings.mTeardown();
+      navigator.mozSettings = realSettings;
+      utils.sdcard.checkStorageCard = checkForCard;
+    });
+
+    setup(function() {
+      navigator.mozSettings.mTeardown();
+
+      importSDButton = document.getElementById('import-sd-option').
+        firstElementChild;
+      exportSDButton = document.getElementById('export-sd-option').
+        firstElementChild;
+    });
+
+    function setUMS(value) {
+      navigator.mozSettings.createLock().set({
+        'ums.enabled': value
+      });
+    }
+
+    function triggerUMSChange(value) {
+      navigator.mozSettings.mTriggerObservers('ums.enabled', {
+        'settingValue': value
+      });
+    }
+
+    test('Without the UMS enabled', function() {
+      setUMS(false);
+
+      contacts.Settings.init();
+      assert.ok(!importSDButton.hasAttribute('disabled'));
+      assert.ok(!exportSDButton.hasAttribute('disabled'));
+    });
+
+    test('Without UMS enabled at start and enabling it', function(done) {
+      setUMS(false);
+
+      contacts.Settings.init();
+
+      // Trigger the ums change
+      triggerUMSChange(true);
+
+      setTimeout(function checkStorageButtons() {
+        assert.ok(importSDButton.hasAttribute('disabled'));
+        assert.ok(exportSDButton.hasAttribute('disabled'));
+        done();
+      }, 200);
+    });
+
+    test('With UMS enabled at start and disabling it', function(done) {
+      setUMS(true);
+
+      contacts.Settings.init();
+      contacts.Settings.refresh(function onRefreshFinished() {
+        assert.ok(importSDButton.hasAttribute('disabled'));
+        assert.ok(exportSDButton.hasAttribute('disabled'));
+
+        triggerUMSChange(false);
+
+        setTimeout(function checkStorageButtons() {
+          assert.ok(!importSDButton.hasAttribute('disabled'));
+          assert.ok(!exportSDButton.hasAttribute('disabled'));
+          done();
+        }, 200);
+      });
+
     });
   });
 });

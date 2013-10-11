@@ -72,7 +72,7 @@ li[aria-disabled="true"] p.match-main-reason {
   background: #e8e8e8;
 }
 
-#footer button {
+#footer button:not([disabled]) {
   pointer-events: auto;
 }
 
