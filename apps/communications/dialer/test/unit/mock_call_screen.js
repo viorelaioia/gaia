@@ -54,10 +54,15 @@ var MockCallScreen = {
   },
   mSingleLine: null,
 
+  set holdAndAnswerOnly(enabled) {
+    this.mHoldAndAnswerOnly = enabled;
+  },
+  mHoldAndAnswerOnly: false,
+
   set cdmaCallWaiting(enabled) {
     this.mCdmaCallWaiting = enabled;
   },
-  mCdmaCallWaiting: null,
+  mCdmaCallWaiting: false,
 
   // Fake dom
   calls: document.createElement('div'),
