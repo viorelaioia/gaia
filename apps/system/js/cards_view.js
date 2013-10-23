@@ -291,7 +291,7 @@ var CardsView = (function() {
 
         // If we have a cached screenshot, use that first
         // We then 'res-in' the correctly sized version
-        var cachedLayer = WindowManager.getCachedScreenshotForApp(origin);
+        var cachedLayer = app.requestScreenshotURL();
         if (cachedLayer) {
           screenshotView.style.backgroundImage = 'url(' + cachedLayer + ')';
         }
@@ -309,18 +309,21 @@ var CardsView = (function() {
           frameForScreenshot.getScreenshot(
             width * DEVICE_RATIO, height * DEVICE_RATIO).onsuccess =
             function gotScreenshot(screenshot) {
-              if (screenshot.target.result) {
-                var objectURL = URL.createObjectURL(screenshot.target.result);
+              var blob = screenshot.target.result;
+              if (blob) {
+                var objectURL = URL.createObjectURL(blob);
 
                 // Overwrite the cached image to prevent flickering
                 screenshotView.style.backgroundImage =
                   'url(' + objectURL + '), url(' + cachedLayer + ')';
 
+                app.renewCachedScreenshotBlob(blob);
+
                 // setTimeout is needed to ensure that the image is fully drawn
                 // before we remove it. Otherwise the rendering is not smooth.
                 // See: https://bugzilla.mozilla.org/show_bug.cgi?id=844245
                 setTimeout(function() {
-                  app.saveCachedScreenshot(objectURL);
+                  URL.revokeObjectURL(objectURL);
                 }, 200);
               }
             };
@@ -595,8 +598,10 @@ var CardsView = (function() {
   function onMoveEventForDeleting(evt, deltaY) {
     var dy = deltaY | initialTouchPosition[1] -
                               (evt.touches ? evt.touches[0].pageY : evt.pageY);
-    evt.target.style.MozTransform = 'scale(' + CC_SCALE +
-                                                  ') translateY(-' + dy + 'px)';
+    if (dy > 0) {
+       evt.target.style.MozTransform = 'scale(' + CC_SCALE +
+                                               ') translateY(' + (-dy) + 'px)';
+    }
   }
 
   function onStartEvent(evt) {

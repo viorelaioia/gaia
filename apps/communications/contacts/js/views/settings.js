@@ -269,6 +269,9 @@ contacts.Settings = (function() {
         requireOverlay(function _loaded() {
           utils.overlay.show(_('preparing-contacts'), null, 'spinner');
           promise.onsuccess = function onSuccess(ids) {
+            // Once we start the export process we can exit from select mode
+            // This will have to evolve once export errors can be captured
+            contacts.List.exitSelectMode();
             var exporter = new ContactsExporter(strategy);
             exporter.init(ids, function onExporterReady() {
               // Leave the contact exporter to deal with the overlay
@@ -276,6 +279,7 @@ contacts.Settings = (function() {
             });
           };
           promise.onerror = function onError() {
+            contacts.List.exitSelectMode();
             utils.overlay.hide();
           };
         });
@@ -662,13 +666,13 @@ contacts.Settings = (function() {
         }
       };
       Contacts.confirmDialog(null, _('simContacts-error'), cancel, retry);
-      Contacts.hideOverlay();
+      resetWait(wakeLock);
     };
 
     importer.start();
   };
 
-  var onSdImport = function onSdImport() {
+  var onSdImport = function onSdImport(cb) {
     var cancelled = false;
     var importer = null;
     var progress = Contacts.showOverlay(
@@ -691,7 +695,7 @@ contacts.Settings = (function() {
       'text/directory'
     ], ['vcf', 'vcard'], function(err, fileArray) {
       if (err)
-        return import_error(err);
+        return import_error(err, cb);
 
       if (cancelled)
         return;
@@ -699,19 +703,19 @@ contacts.Settings = (function() {
       if (fileArray.length)
         utils.sdcard.getTextFromFiles(fileArray, '', onFiles);
       else
-        import_error('No contacts were found.');
+        import_error('No contacts were found.', cb);
     });
 
     function onFiles(err, text) {
       if (err)
-        return import_error(err);
+        return import_error(err, cb);
 
       if (cancelled)
         return;
 
       importer = new VCFReader(text);
       if (!text || !importer)
-        return import_error('No contacts were found.');
+        return import_error('No contacts were found.', cb);
 
       importer.onread = import_read;
       importer.onimported = imported_contact;
@@ -728,6 +732,9 @@ contacts.Settings = (function() {
               Contacts.showStatus(_('memoryCardContacts-imported3', {
                 n: importedContacts
               }));
+              if (typeof cb === 'function') {
+                cb();
+              }
             }
           });
         }, DELAY_FEEDBACK);
@@ -745,7 +752,7 @@ contacts.Settings = (function() {
       progress.update();
     }
 
-    function import_error(e) {
+    function import_error(e, cb) {
       var cancel = {
         title: _('cancel'),
         callback: function() {
@@ -764,7 +771,10 @@ contacts.Settings = (function() {
       };
       Contacts.confirmDialog(null, _('memoryCardContacts-error'), cancel,
         retry);
-      Contacts.hideOverlay();
+      resetWait(wakeLock);
+      if (typeof cb === 'function') {
+        cb();
+      }
     }
   };
 
@@ -927,6 +937,7 @@ contacts.Settings = (function() {
     'onLineChanged': checkOnline,
     'cardStateChanged': checkSIMCard,
     'updateTimestamps': updateTimestamps,
-    'navigation': navigationHandler
+    'navigation': navigationHandler,
+    'importFromSDCard': onSdImport
   };
 })();
