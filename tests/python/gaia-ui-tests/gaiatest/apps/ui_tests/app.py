@@ -19,7 +19,7 @@ class UiTests(Base):
     _app_login_event = (By.CSS_SELECTOR, 'li.login')
     _app_logout_event = (By.CSS_SELECTOR, 'li.logout')
     _app_login_assertion_text = (By.CSS_SELECTOR, 'li.login div.assertion')
-    _keyboard_locator = (By.ID, 'test-list > li:nth-child(2) > a')
+    _keyboard_locator = (By.CSS_SELECTOR, '#test-list > li:nth-child(2) > a')
 
     def __init__(self, marionette):
         Base.__init__(self, marionette)
