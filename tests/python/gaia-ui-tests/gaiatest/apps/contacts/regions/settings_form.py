@@ -20,6 +20,8 @@ class SettingsForm(Base):
     _export_to_sd_button_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="memoryCard"]')
     _import_contacts_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="importContactsTitle"]')
     _export_contacts_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="exportContactsTitle"]')
+    _contacts_imported_locator = (By.CSS_SELECTOR, '.icon.icon-gmail > p > span')
+    _contacts_locator = (By.CSS_SELECTOR, '.block-item > p > strong')
 
     def __init__(self, marionette):
         Base.__init__(self, marionette)
@@ -49,6 +51,16 @@ class SettingsForm(Base):
         self.marionette.find_element(*self._import_from_sim_button_locator).tap()
         self.wait_for_element_not_displayed(*self._loading_overlay_locator)
 
+    @property
+    def import_message(self):
+        return self.marionette.find_element(*self._contacts_imported_locator).text
+
+    def tap_import_from_gmail(self):
+        self.wait_for_element_displayed(*self._import_from_gmail_button_locator)
+        self.marionette.find_element(*self._import_from_gmail_button_locator).tap()
+        from gaiatest.apps.contacts.regions.gmail import Gmail
+        return Gmail(self.marionette)
+
     def tap_import_from_sdcard(self):
         self.wait_for_element_displayed(*self._import_from_sdcard_locator)
         self.marionette.find_element(*self._import_from_sdcard_locator).tap()
@@ -68,3 +80,7 @@ class SettingsForm(Base):
     def tap_back_from_import_contacts(self):
         self.wait_for_element_displayed(*self._back_from_import_contacts_locator)
         self.marionette.find_element(*self._back_from_import_contacts_locator).tap()
+
+    @property
+    def contacts(self):
+        return self.marionette.find_elements(*self._contacts_locator)
