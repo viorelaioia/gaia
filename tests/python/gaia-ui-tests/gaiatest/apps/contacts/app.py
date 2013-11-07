@@ -19,10 +19,10 @@ class Contacts(Base):
     _contacts_frame_locator = (By.CSS_SELECTOR, 'iframe[src*="contacts"][src*="/index.html"]')
     _select_all_button_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="selectAll"]')
     _export_button_locator = (By.ID, 'select-action')
+    _first_contact_locator = (By.CSS_SELECTOR, 'li.block-item label span')
     _status_message_locator = (By.ID, 'statusMsg')
     _select_contacts_to_import_frame_locator = (By.ID, 'fb-extensions')
     _import_locator = (By.ID, 'import-action')
-    _first_contact_locator = (By.CSS_SELECTOR, 'li.block-item label span')
 
     #  contacts
     _contact_locator = (By.CSS_SELECTOR, 'li.contact-item')
