@@ -16,6 +16,11 @@
       "email": "",
       "password": ""
     },
+    "outlook": {
+      "name": "",
+      "email": "",
+      "password": ""
+    },
     "IMAP": {
       "name": "",
       "email": "",
