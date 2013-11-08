@@ -85,6 +85,7 @@
     <link rel="import" href="/elements/call_fdn_list.html">
     <link rel="import" href="/elements/call_fdn_settings.html">
     <link rel="import" href="/elements/call.html">
+    <link rel="import" href="/elements/messaging.html">
     <link rel="import" href="/elements/carrier_operator_settings.html">
     <link rel="import" href="/elements/carrier_data_settings.html">
     <link rel="import" href="/elements/carrier_mms_settings.html">
@@ -131,6 +132,7 @@
     <link rel="import" href="/elements/improve_browser_os.html">
     <link rel="import" href="/elements/help.html">
     <link rel="import" href="/elements/icc.html">
+    <link rel="import" href="/elements/downloads.html">
   </head>
   <body class="skin-organic uninit">
     <!--
@@ -202,6 +204,8 @@
     <section is="call-voiceMailSettings" role="region" id="call-voiceMailSettings"></section>
     <!-- Connectivity :: Call -->
     <section is="call" role="region" id="call" data-require-sub-panels="true"></section>
+    <!-- Connectivity :: Messaging -->
+    <section is="messaging" role="region" id="messaging"></section>
     <!-- Connectivity :: Cellular & Data :: Network Operator -->
     <section is="carrier-operatorSettings" role="region" id="carrier-operatorSettings"></section>
     <!-- Connectivity :: Cellular & Data :: Data Settings -->
@@ -278,6 +282,8 @@
     <section is="about-legal" role="region" id="about-legal"></section>
     <!-- Device :: Information -->
     <section is="about" role="region" id="about"></section>
+    <!-- Device :: Downloads -->
+    <section is="downloads" role="region" id="downloads"></section>
     <!-- Device :: Battery -->
     <section is="battery" role="region" id="battery"></section>
     <!-- Device :: Device Storage -->
@@ -333,6 +339,10 @@
           <li id="call-settings">
             <small id="call-desc" class="menu-item-desc"></small>
             <a id="menuItem-callSettings" class="menu-item" href="#call" data-l10n-id="callSettings">Call Settings</a>
+          </li>
+          <li id="messaging-settings">
+            <small id="messaging-desc" class="menu-item-desc"></small>
+            <a id="menuItem-messagingSettings" class="menu-item" href="#messaging" data-l10n-id="messagingSettings">Messaging Settings</a>
           </li>
           <li id="data-connectivity">
             <small id="data-desc" class="menu-item-desc"></small>
@@ -445,6 +455,9 @@
         <ul>
           <li>
             <a id="menuItem-deviceInfo" class="menu-item" href="#about" data-l10n-id="deviceInfo">Device Information</a>
+          </li>
+          <li>
+            <a id="menuItem-downloads" class="menu-item" href="#downloads" data-l10n-id="downloads">Downloads</a>
           </li>
           <li>
             <small id="battery-desc" class="menu-item-desc"></small>
