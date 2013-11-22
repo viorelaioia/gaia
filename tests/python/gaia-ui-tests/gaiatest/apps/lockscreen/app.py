@@ -14,7 +14,6 @@ class LockScreen(Base):
 
     _lockscreen_locator = (By.ID, 'lockscreen')
     _lockscreen_slider_locator = (By.ID, 'lockscreen-icon-container')
-
     _lockscreen_handle_locator = (By.ID, 'lockscreen-slide-handle')
     _passcode_pad_locator = (By.ID, 'lockscreen-passcode-pad')
     _notification_locator = (By.CSS_SELECTOR, '#notifications-lockscreen-container > div.notification')
@@ -49,6 +48,9 @@ class LockScreen(Base):
 
     def wait_for_lockscreen_not_visible(self):
         self.wait_for_condition(lambda m: not self.marionette.find_element(*self._lockscreen_locator).location['x'] == 0, message="Lockscreen still visible after unlock")
+
+    def wait_for_message_notification(self, timeout=180):
+        self.wait_for_element_displayed(*self._notification_locator, timeout=timeout)
 
     @property
     def passcode_pad(self):
