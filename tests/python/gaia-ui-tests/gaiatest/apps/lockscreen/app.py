@@ -13,8 +13,8 @@ from gaiatest.apps.camera.app import Camera
 class LockScreen(Base):
 
     _lockscreen_locator = (By.ID, 'lockscreen')
-    _lockscreen_handle_locator = (By.ID, 'lockscreen-area-slide')
-
+    _lockscreen_slider_locator = (By.ID, 'lockscreen-icon-container')
+    _lockscreen_handle_locator = (By.ID, 'lockscreen-slide-handle')
     _passcode_pad_locator = (By.ID, 'lockscreen-passcode-pad')
     _notification_locator = (By.CSS_SELECTOR, '#notifications-lockscreen-container > div.notification')
 
@@ -47,6 +47,9 @@ class LockScreen(Base):
 
     def wait_for_lockscreen_not_visible(self):
         self.wait_for_element_not_displayed(*self._lockscreen_locator)
+
+    def wait_for_notification(self, timeout=180):
+        self.wait_for_element_displayed(*self._notification_locator, timeout=timeout)
 
     @property
     def passcode_pad(self):
