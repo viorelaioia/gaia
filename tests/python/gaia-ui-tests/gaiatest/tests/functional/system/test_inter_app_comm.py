@@ -3,45 +3,22 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import time
-from marionette.by import By
-from gaiatest.apps.base import Base 
 from gaiatest import GaiaTestCase
 from marionette import Marionette
+from gaiatest.apps.iac_publisher.app import IacPublisher
 
-class TestIacPublisher(Base):
-    def __init__(self, marionette):
-        Base.__init__(self, marionette)
-        self.name = "Test IAC Publisher"
-
-    def launch(self):
-        Base.launch(self, launch_timeout=120000)
 
 class TestInterAppComm(GaiaTestCase):
-    _testing_message = "this is a test"
-
-    _pub_app_msg_to_send_locator = (By.ID, "msgToSend")
-    _pub_app_send_button_locator = (By.ID, "sendButton")
-    _pub_app_num_conns_locator = (By.ID, "numConns")
-    _pub_app_received_str_msg_locator = (By.ID, "receivedStrMsg")
-    _pub_app_received_blob_msg_locator = (By.ID, "receivedBlobMsg")
 
     def setUp(self):
         GaiaTestCase.setUp(self)
 
     def test_inter_app_comm(self):
-        test_iac_publisher = TestIacPublisher(self.marionette)
+        _testing_message = "this is a test"
 
-        test_iac_publisher.launch()
-
-        self.wait_for_element_displayed(*self._pub_app_msg_to_send_locator)
-        self.marionette.execute_script("""
-            var msgToSend = document.getElementById('msgToSend');
-            msgToSend.value = "%s";
-        """ % (self._testing_message))
-
-        self.marionette.find_element(*self._pub_app_send_button_locator).tap();
-
-        self.wait_for_element_present(*self._pub_app_received_str_msg_locator)
+        iac_publisher = IacPublisher(self.marionette)
+        iac_publisher.launch()
+        iac_publisher.send_message(_testing_message)
 
         received_str_msg = self.marionette.find_element(*self._pub_app_received_str_msg_locator);
         self.assertEqual(received_str_msg.get_attribute("value"), self._testing_message)
