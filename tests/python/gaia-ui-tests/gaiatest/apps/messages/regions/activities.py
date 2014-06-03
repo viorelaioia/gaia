@@ -14,6 +14,7 @@ class Activities(Base):
     _settings_button_locator = (By.XPATH, '//*[text()="Settings"]')
     _add_subject_button_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="add-subject"]')
     _add_to_contact_button_locator = (By.XPATH, '//*[text()="Add to an existing contact"]')
+    _create_new_contact_button_locator = (By.CSS_SELECTOR, 'button[data-l10n-id="createNewContact"]')
 
     def __init__(self, marionette):
         Base.__init__(self, marionette)
