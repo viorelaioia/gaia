@@ -2,12 +2,11 @@
  * UI infrastructure code and utility code for the gaia email app.
  **/
 /*jshint browser: true */
-/*global define, console, startupCacheEventsSent */
+/*global define, console */
 'use strict';
 define(function(require, exports) {
 
 var Cards, Toaster,
-    evt = require('evt'),
     mozL10n = require('l10n!'),
     toasterNode = require('tmpl!./cards/toaster.html'),
     confirmDialogTemplateNode = require('tmpl!./cards/confirm_dialog.html'),
@@ -174,13 +173,6 @@ Cards = {
    * cleanup, like DOM removal.
    */
   _transitionCount: 0,
-
-  /**
-   * Tracks if startup events have been emitted. The events only need to be
-   * emitted once.
-   * @type {Boolean}
-   */
-  _startupEventsEmitted: false,
 
   /**
    * Is a tray card visible, suggesting that we need to intercept clicks in the
@@ -851,7 +843,9 @@ Cards = {
       removeClass(beginNode, 'no-anim');
       removeClass(endNode, 'no-anim');
 
-      this._onCardVisible(cardInst);
+      if (cardInst && cardInst.cardImpl.onCardVisible) {
+        cardInst.cardImpl.onCardVisible();
+      }
     }
 
     // Hide toaster while active card index changed:
@@ -920,7 +914,8 @@ Cards = {
         afterTransitionAction();
       }
 
-      this._onCardVisible(activeCard);
+      if (activeCard.cardImpl.onCardVisible)
+        activeCard.cardImpl.onCardVisible();
 
       // If the card has next cards that can be preloaded, load them now.
       // Use of nextCards should be balanced with startup performance.
@@ -934,44 +929,6 @@ Cards = {
           return 'cards/' + id;
         }));
       }
-    }
-  },
-
-  /**
-   * Handles final notification of card visibility in the stack.
-   * @param  {Card} cardInst the card instance.
-   */
-  _onCardVisible: function(cardInst) {
-    if (cardInst.cardImpl.onCardVisible) {
-      cardInst.cardImpl.onCardVisible();
-    }
-    this._emitStartupEvents(cardInst.cardImpl.skipEmitContentEvents);
-  },
-
-  /**
-   * Handles emitting startup events used for performance tracking.
-   * @param  {Boolean} skipEmitContentEvents if content events should be skipped
-   * because the card itself handles it.
-   */
-  _emitStartupEvents: function(skipEmitContentEvents) {
-    if (!this._startupEventsEmitted) {
-      if (startupCacheEventsSent) {
-        // Cache already loaded, so at this point the content shown is wired
-        // to event handlers.
-        window.dispatchEvent(new CustomEvent('moz-content-interactive'));
-      } else {
-        // Cache was not used, so only now is the chrome dom loaded.
-        window.dispatchEvent(new CustomEvent('moz-chrome-dom-loaded'));
-      }
-      window.dispatchEvent(new CustomEvent('moz-chrome-interactive'));
-
-      // If a card that has a simple static content DOM, content is complete.
-      // Otherwise, like message_list, need backend data to call complete.
-      if (!skipEmitContentEvents) {
-        evt.emit('metrics:contentDone');
-      }
-
-      this._startupEventsEmitted = true;
     }
   },
 
