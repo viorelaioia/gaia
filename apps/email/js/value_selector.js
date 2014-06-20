@@ -1,9 +1,8 @@
 /*
 !! Warning !!
-  This value selector uses the form layout as specified in
-  shared/style/value_selector/index.html. If that changes, or its associated
-  styles change, then this file or value_selector.html or vsl/index.html may
-  need to be adjusted.
+  This value selector is modified for email folder selection only.
+  API and layout are changed because of the sub-folder indentation display.
+  Please reference the original version selector in contact app before using.
 
 How to:
   var prompt1 = new ValueSelector('Dummy title 1', [
@@ -22,20 +21,22 @@ How to:
 /*jshint browser: true */
 /*global alert, define */
 define(function(require) {
-'use strict';
 
 var FOLDER_DEPTH_CLASSES = require('folder_depth_classes'),
-    formNode = require('tmpl!cards/value_selector.html'),
-    itemTemplateNode = require('tmpl!cards/vsl/item.html');
+    mozL10n = require('l10n!');
 
 // Used for empty click handlers.
 function noop() {}
 
 function ValueSelector(title, list) {
   var init, show, hide, render, setTitle, emptyList, addToList,
-      data;
+      data, el;
 
   init = function() {
+    var strPopup, body, section, btnCancel, cancelStr;
+
+    // Model. By having dummy data in the model,
+    // it make it easier for othe developers to catch up to speed
     data = {
       title: 'No Title',
       list: [
@@ -48,12 +49,35 @@ function ValueSelector(title, list) {
       ]
     };
 
-    document.body.appendChild(formNode);
+    body = document.body;
+    cancelStr = mozL10n.get('message-multiedit-cancel');
 
-    var btnCancel = formNode.querySelector('button');
-    btnCancel.addEventListener('click', function(event) {
-      event.stopPropagation();
-      event.preventDefault();
+    el = document.createElement('section');
+    el.setAttribute('class', 'valueselector');
+    el.setAttribute('role', 'region');
+
+    strPopup = '<div role="dialog">';
+    strPopup += '  <div class="center">';
+    strPopup += '    <h3>No Title</h3>';
+    strPopup += '    <ul>';
+    strPopup += '      <li>';
+    strPopup += '        <label class="pack-radio">';
+    strPopup += '          <input type="radio" name="option">';
+    strPopup += '          <span>Dummy element</span>';
+    strPopup += '        </label>';
+    strPopup += '      </li>';
+    strPopup += '    </ul>';
+    strPopup += '  </div>';
+    strPopup += '  <menu>';
+    strPopup += '    <button>' + cancelStr + '</button>';
+    strPopup += '  </menu>';
+    strPopup += '</div>';
+
+    el.innerHTML += strPopup;
+    body.appendChild(el);
+
+    btnCancel = el.querySelector('button');
+    btnCancel.addEventListener('click', function() {
       hide();
     });
 
@@ -72,39 +96,48 @@ function ValueSelector(title, list) {
 
   show = function() {
     render();
-    formNode.classList.remove('collapsed');
+    el.classList.add('visible');
   };
 
   hide = function() {
-    formNode.classList.add('collapsed');
+    el.classList.remove('visible');
     emptyList();
   };
 
   render = function() {
-    var title = formNode.querySelector('h1'),
-        list = formNode.querySelector('ol');
+    var title = el.querySelector('h3'),
+        list = el.querySelector('ul');
 
     title.textContent = data.title;
 
     list.innerHTML = '';
-    data.list.forEach(function(listItem) {
-      var node = itemTemplateNode.cloneNode(true);
+    for (var i = 0; i < data.list.length; i++) {
+      var li = document.createElement('li'),
+          label = document.createElement('label'),
+          input = document.createElement('input'),
+          span = document.createElement('span'),
+          text = document.createTextNode(data.list[i].label);
 
-      node.querySelector('span').textContent = listItem.label;
-
+      input.setAttribute('type', 'radio');
+      input.setAttribute('name', 'option');
+      label.classList.add('pack-radio');
+      label.appendChild(input);
+      span.appendChild(text);
+      label.appendChild(span);
       // Here we apply the folder-card's depth indentation to represent label.
-      var depthIdx = listItem.depth;
+      var depthIdx = data.list[i].depth;
       depthIdx = Math.min(FOLDER_DEPTH_CLASSES.length - 1, depthIdx);
-      node.classList.add(FOLDER_DEPTH_CLASSES[depthIdx]);
+      label.classList.add(FOLDER_DEPTH_CLASSES[depthIdx]);
 
       // If not selectable use an empty click handler. Because of event
       // fuzzing, we want to have something registered, otherwise an
       // adjacent list item may receive the click.
-      var callback = listItem.selectable ? listItem.callback : noop;
-      node.addEventListener('click', callback, false);
+      var callback = data.list[i].selectable ? data.list[i].callback : noop;
+      li.addEventListener('click', callback, false);
 
-      list.appendChild(node);
-    });
+      li.appendChild(label);
+      list.appendChild(li);
+    }
   };
 
   setTitle = function(str) {
