@@ -34,9 +34,10 @@
     /*
     * Boolean return the status of the lock screen.
     * Must not multate directly - use unlock()/lockIfEnabled()
-    * Listen to 'lock' and 'unlock' event to properly handle status changes
+    * Listen to 'lockscreen-appclosed/opening/opened' events to properly
+    * handle status changes
     */
-    locked: true,
+    _locked: true,
 
     /*
     * Boolean return whether if the lock screen is enabled or not.
@@ -250,7 +251,6 @@
         if (!this.locked) {
           this.switchPanel();
           this.overlay.hidden = true;
-          this.dispatchEvent('unlock', this.unlockDetail);
           this.unlockDetail = undefined;
         }
         break;
@@ -481,6 +481,12 @@
     if(this._checkGenerateMaskedBackgroundColor()){
       this._generateMaskedBackgroundColor();
     }
+
+    // start the clock because screenchange won't trigger when
+    // screen locks just after boot
+    // Clock always uses one Timeouts/Intervals so it's safe in
+    // other scenarios (such as turning on lockscreen after boot in settings)
+    this.clock.start(this.refreshClock.bind(this));
   };
 
   LockScreen.prototype.initUnlockerEvents =
@@ -749,7 +755,7 @@
     this.overlay.classList.toggle('no-transition', instant);
 
     var nextPaint = function() {
-      this.dispatchEvent('will-unlock', detail);
+      this.dispatchEvent('lockscreen-request-unlock', detail);
       this.dispatchEvent('secure-modeoff');
       this.overlay.classList.add('unlocked');
 
@@ -758,7 +764,6 @@
       if (instant) {
         this.switchPanel();
         this.overlay.hidden = true;
-        this.dispatchEvent('unlock', detail);
       } else {
         this.unlockDetail = detail;
       }
@@ -790,7 +795,6 @@
 
       // Any changes made to this,
       // also need to be reflected in apps/system/js/storage.js
-      this.dispatchEvent('lock', {detail: this.locked});
       this.dispatchEvent('secure-modeon');
       this.writeSetting(true);
 

@@ -16,10 +16,10 @@
    * @constructor LockScreenWindowManager
    */
   var LockScreenWindowManager = function() {
-    this.startEventListeners();
-    this.startObserveSettings();
     this.initElements();
     this.initWindow();
+    this.startEventListeners();
+    this.startObserveSettings();
   };
   LockScreenWindowManager.prototype = {
     /**
@@ -40,16 +40,14 @@
       FTUOccurs: false,
       enabled: true,
       unlockDetail: null,
-      instance: null,
-      active: false,
-      windowCreating: false
+      instance: null
     },
 
     /**
      * @memberof LockScreenWindowManager#
      */
     configs: {
-      listens: ['will-unlock',
+      listens: ['lockscreen-request-unlock',
                 'lockscreen-appcreated',
                 'lockscreen-appterminated',
                 'lockscreen-appclose',
@@ -96,13 +94,11 @@
           }
           // Need immediatly unlocking (hide window).
           this.closeApp(true);
-          window.dispatchEvent(
-            new CustomEvent('unlock'));
           break;
         case 'ftudone':
           this.states.FTUOccurs = false;
           break;
-        case 'will-unlock':
+        case 'lockscreen-request-unlock':
           this.states.unlockDetail = evt.detail;
           this.closeApp();
           break;
@@ -115,8 +111,6 @@
           this.unregisterApp(app);
           break;
         case 'lockscreen-appclose':
-          window.dispatchEvent(
-            new CustomEvent('unlock', this.states.unlockDetail));
           this.states.unlockDetail = null;
           break;
         case 'screenchange':
@@ -220,12 +214,11 @@
    */
   LockScreenWindowManager.prototype.closeApp =
     function lwm_closeApp(instant) {
-      if (!this.states.enabled && !this.states.active) {
+      if (!this.states.enabled) {
         return;
       }
       this.states.instance.close(instant ? 'immediate': undefined);
       this.elements.screen.classList.remove('locked');
-      this.states.active = false;
     };
 
   /**
@@ -248,7 +241,6 @@
         this.states.instance.open();
       }
       this.elements.screen.classList.add('locked');
-      this.states.active = true;
     };
 
   /**
@@ -299,13 +291,8 @@
    */
   LockScreenWindowManager.prototype.createWindow =
     function lwm_createWindow() {
-      if (this.states.windowCreating) {
-        return false;
-      }
-      this.states.windowCreating = true;
       var app = new window.LockScreenWindow();
       app.open();
-      this.states.windowCreating = false;
     };
 
   /**

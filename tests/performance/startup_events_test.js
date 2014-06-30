@@ -21,6 +21,7 @@ var whitelistedApps = [
 
 var whitelistedUnifiedApps = [
   'camera',
+  'clock',
   'communications/dialer',
   'fm',
   'gallery',

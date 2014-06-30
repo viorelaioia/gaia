@@ -15,16 +15,23 @@
     this.store = store;
     this.entries = [];
 
-    eventTypesToListenFor.forEach(function iterateTypes(type) {
-      CollectionsDatabase.addEventListener(type, this);
-    }, this);
-
-    window.addEventListener('context-menu-open', this);
-    window.addEventListener('collections-create-begin', this);
-    window.addEventListener('collections-create-return', this);
   }
 
   CollectionSource.prototype = {
+
+    _setListeners: function() {
+      eventTypesToListenFor.forEach(function iterateTypes(type) {
+        CollectionsDatabase.addEventListener(type, this);
+      }, this);
+
+      window.addEventListener('context-menu-open', this);
+      window.addEventListener('collections-create-begin', this);
+      window.addEventListener('collections-create-return', this);
+
+      // Turn this function into a no-op so we  don't add listeners again.
+      this._setListeners = function() {};
+    },
+
 
     /**
      * Whether or not we are currently in a create activity.
@@ -54,6 +61,7 @@
      */
     synchronize: function() {
       // TODO: Synchronize logic.
+      this._setListeners();
     },
 
     /**
@@ -67,6 +75,7 @@
         Object.keys(systemCollections).forEach(function(id) {
           self.entries.push(new GaiaGrid.Collection(systemCollections[id]));
         });
+        self._setListeners();
 
         success(self.entries);
       }, success);
@@ -87,6 +96,8 @@
         case 'removed':
           // The 'id' of a Collection is really the url.
           this.removeIconFromGrid(e.target.id);
+          // Save the layout once a collection has been removed
+          app.itemStore.save(app.grid.getItems());
           break;
         case 'context-menu-open':
           this.insertPosition = e.detail.nearestIndex;
@@ -157,15 +168,8 @@
     removeIconFromGrid: function(url) {
       var icons = app.grid.getIcons();
       var appObject = icons[url];
-      app.grid.removeIconByIdentifier(url);
-
-      var items = app.grid.getItems();
-      var itemIndex = items.indexOf(appObject);
-      app.grid.removeItemByIndex(itemIndex);
-      app.grid.render();
-
-      if (appObject && appObject.element) {
-        appObject.element.parentNode.removeChild(appObject.element);
+      if (appObject) {
+        appObject.removeFromGrid();
       }
     },
 

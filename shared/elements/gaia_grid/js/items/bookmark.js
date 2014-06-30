@@ -80,6 +80,9 @@
     render: function(coordinates, index) {
       GaiaGrid.GridItem.prototype.render.call(this, coordinates, index);
       this.element.classList.add('bookmark');
+      if (this.isEditable()) {
+        this.element.classList.add('editable');
+      }
     },
 
     /**
@@ -104,19 +107,6 @@
         return encodeURIComponent(key) + '=' +
           encodeURIComponent(features[key]);
       }).join(','));
-    },
-
-    /**
-     * Opens a web activity to remove the bookmark.
-     */
-    remove: function() {
-      new MozActivity({
-        name: 'remove-bookmark',
-        data: {
-          type: 'url',
-          url: this.detail.id
-        }
-      });
     },
 
     /**

@@ -99,6 +99,63 @@ marionette('Vertical - Collection', function() {
     client.waitFor(function() {
       return expected === collectionIcon.text();
     });
+
+    server.failAll();
+
+    // Now verify the translation inside of the offline message
+    collectionIcon.tap();
+
+    client.switchToFrame();
+    client.apps.switchToApp(Collection.URL);
+
+    var offlineMessage = client.helper.waitForElement(
+          selectors.offlineMessage);
+
+    // Collections named are stubbed in gaia properties. See:
+    // shared/locales/collection_categories/collection_categories.fr.properties
+    assert.ok(offlineMessage.text().indexOf(expected) !== -1);
+
+    server.unfailAll();
+
+    client.executeScript(function() {
+      window.dispatchEvent(new CustomEvent('online'));
+    });
+
+    client.helper.waitForElementToDisappear(offlineMessage);
+  });
+
+  test('create collection shows message when offline', function() {
+    collection.enterCreateScreen();
+
+    client.switchToFrame();
+    client.apps.switchToApp(Collection.URL);
+
+    var expectedMsg = home.l10n(
+      '/locales-obj/en-US.json',
+      'network-error-message'
+    );
+
+    // This is not quite the same path the user sees during a collection create
+    // but it should still let us test quite a bit. Instead of following the
+    // navigator.isOnline path, we fire an offline event which will also show
+    // the same alert.
+    client.executeScript(function() {
+      setTimeout(function() {
+        window.dispatchEvent(new CustomEvent('offline'));
+      });
+    });
+
+    // Wait for the system alert to be populated with the expected message.
+    // Convert the alert to a RegExp.
+    expectedMsg = new RegExp('.*' + expectedMsg + '.*');
+
+    client.switchToFrame();
+    client.waitFor(function() {
+      var msg = client
+          .findElement('.modal-dialog-alert')
+          .text();
+      return expectedMsg.test(msg);
+    });
   });
 
   test('pin collection web result', function() {
@@ -125,6 +182,10 @@ marionette('Vertical - Collection', function() {
       var currentDividers = client.findElements(selectors.allDividers).length;
       return currentDividers === numDividers + 1;
     });
+
+    // Bug 1030704 - Ensure the divider is visible
+    var firstDivider = client.helper.waitForElement(selectors.allDividers);
+    assert.ok(firstDivider.displayed());
 
     // Compare the position of the first pinned icon to the first web result.
     // The pinned icon should be higher than the web result.
@@ -177,4 +238,50 @@ marionette('Vertical - Collection', function() {
       'the second icon has moved to the left.');
   });
 
+  test('drag icon (/w entry point) into collection', function() {
+    var dialerManifest = 'app://communications.gaiamobile.org/manifest.webapp';
+    var dialerEntryPoint = 'dialer';
+
+    collection.enterCreateScreen();
+
+    // A collection name from the cateories_list.json stub
+    var collectionName = 'Around Me';
+    collection.selectNew(collectionName);
+    client.apps.switchToApp(Home2.URL);
+
+    // Drag the 'Phone' application into the created collection.
+    // We specifically choose phone because it has an entry point.
+    var phoneIcon = home.getIcon(dialerManifest, dialerEntryPoint);
+    var collectionIcon = collection.getCollectionByName(collectionName);
+
+    var bodyHeight = client.findElement('body').size().height;
+    var iconTop = phoneIcon.scriptWith(function(el) {
+      return el.getBoundingClientRect().top;
+    });
+
+    actions
+      .press(phoneIcon)
+      .wait(1)
+
+      // Move the phone icon to the bottom of the screen to scroll down.
+      .moveByOffset(0, bodyHeight - iconTop)
+      .wait(4)
+
+      // Now drop the icon into the collection
+      .move(collectionIcon)
+      .release()
+      .wait(1)
+      .perform();
+
+    // Exit edit mode.
+    var done = client.helper.waitForElement(Home2.Selectors.editHeaderDone);
+    done.click();
+
+    // Enter the created collection.
+    collection.enterCollection(collectionIcon);
+
+    var firstPinnedIcon = client.findElement(selectors.firstPinnedResult);
+    assert.equal(firstPinnedIcon.text(),
+      home.localizedAppName('communications', 'dialer', 'en-US'));
+  });
 });

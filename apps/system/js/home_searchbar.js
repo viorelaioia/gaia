@@ -48,8 +48,11 @@
       window.addEventListener('appforeground', this);
       window.addEventListener('apptitlechange', this);
       window.addEventListener('home', this);
+      window.addEventListener('lock', this);
       window.addEventListener('appopened', this);
+      window.addEventListener('launchactivity', this, true);
       window.addEventListener('searchcrashed', this);
+      window.addEventListener('permissiondialoghide', this);
 
       // Listen for events from Rocketbar
       this.input.addEventListener('focus', this);
@@ -86,6 +89,9 @@
         case 'home':
           this.handleHome(e);
           break;
+        case 'lock':
+          this.handleLock(e);
+          break;
         case 'focus':
           this.handleFocus(e);
           break;
@@ -104,6 +110,9 @@
             this.deactivate();
           }
           break;
+        case 'launchactivity':
+          this.handleActivity(e);
+          break;
         case 'searchcrashed':
           this.handleSearchCrashed(e);
           break;
@@ -112,6 +121,11 @@
           break;
         case 'iac-search-results':
           this.handleSearchMessage(e);
+          break;
+        case 'permissiondialoghide':
+          if (this.active) {
+            this.focus();
+          }
           break;
       }
     },

@@ -54,7 +54,8 @@
 
     processBookmark: function(eachBookmark) {
       var features = {
-        isEditable: false
+        isEditable: false,
+        search: true
       };
       var bookmark = new GaiaGrid.Bookmark(eachBookmark, features);
       this.gridItemsByIdentifier[bookmark.identifier] = bookmark;
@@ -78,6 +79,7 @@
         if (!icon.icon) {
           return;
         }
+        icon.isRemovable = () => true;
         this.gridItemsByIdentifier[icon.identifier] = icon;
       }
 

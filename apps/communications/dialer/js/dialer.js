@@ -10,7 +10,7 @@ var NavbarManager = {
     this.update();
     var self = this;
     window.addEventListener('hashchange' , function nm_hashChange(event) {
-      // TODO Implement it with building blocks:
+      // FIXME/bug 1026079: Implement it with building blocks:
       // https://github.com/jcarpenter/Gaia-UI-Building-Blocks/blob/master/inprogress/tabs.css
       // https://github.com/jcarpenter/Gaia-UI-Building-Blocks/blob/master/inprogress/tabs.html
       self.update();
@@ -96,7 +96,9 @@ var NavbarManager = {
         }
 
         contacts.classList.add('toolbar-option-selected');
-        AccessibilityHelper.setAriaSelected(contacts, tabs);
+        this.ensureResources(function() {
+          AccessibilityHelper.setAriaSelected(contacts, tabs);
+        });
         break;
       case '#keyboard-view':
         checkContactsTab();
@@ -461,7 +463,7 @@ document.addEventListener('visibilitychange', function visibilitychanged() {
     // *immediately*.
     TonePlayer.trashAudio();
     // Just in case stop any dtmf tone
-    if (navigator.mozTelephony) {
+    if (navigator.mozTelephony && navigator.mozTelephony.stopTone) {
       navigator.mozTelephony.stopTone();
     }
   }

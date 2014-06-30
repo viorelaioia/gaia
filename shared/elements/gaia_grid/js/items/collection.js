@@ -28,7 +28,9 @@
     };
 
     // XXX: One listener per collection may not be ideal.
-    window.addEventListener('localized', this.onLocalize.bind(this));
+    // Bug 1026236 l10n does not automatically handle these for us so
+    // we handle locale updates ourselves.
+    window.addEventListener('localized', this.updateTitle.bind(this));
   }
 
   Collection.prototype = {
@@ -36,18 +38,6 @@
     __proto__: GaiaGrid.GridItem.prototype,
 
     renderer: GridIconRenderer.TYPE.CLIP,
-
-    /**
-    Bug 1026236 l10n does not automatically handle these for us so
-    we handle locale updates ourselves.
-    */
-    onLocalize: function() {
-      if (!this.element) {
-        return;
-      }
-      var nameEl = this.element.querySelector('.title');
-      nameEl.textContent = this.name;
-    },
 
     /**
      * Returns the height in pixels of each icon.
@@ -80,6 +70,15 @@
 
     update: GaiaGrid.GridItem.prototype.updateFromDatastore,
 
+    render: function(coordinates, index) {
+      // Add 'collection' to the class list when the element gets created
+      var setClassName = !this.element;
+      GaiaGrid.GridItem.prototype.render.call(this, coordinates, index);
+      if (setClassName) {
+        this.element.classList.add('collection');
+      }
+    },
+
     /**
      * Collections are always editable.
      */
@@ -98,10 +97,15 @@
      * Launches the application for this icon.
      */
     launch: function() {
-      new MozActivity({
+      this.grid.element.dispatchEvent(new CustomEvent('collection-launch'));
+      var activity = new MozActivity({
         name: 'view-collection',
         data: this.detail
       });
+
+      activity.onsuccess = activity.onerror = () => {
+        this.grid.element.dispatchEvent(new CustomEvent('collection-close'));
+      };
     },
 
 
@@ -111,16 +115,6 @@
     edit: function() {
       new MozActivity({
         name: 'update-collection',
-        data: this.detail
-      });
-    },
-
-    /**
-     * Uninstalls the application.
-     */
-    remove: function() {
-      new MozActivity({
-        name: 'delete-collection',
         data: this.detail
       });
     }

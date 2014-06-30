@@ -2,6 +2,7 @@
 /* global CategoryCollection */
 /* global CollectionsDatabase */
 /* global CollectionIcon */
+/* global NativeInfo */
 /* global Promise */
 /* global QueryCollection */
 /* global Suggestions */
@@ -44,6 +45,17 @@
 
   function HandleCreate(activity) {
 
+    function onOffline() {
+      alert(navigator.mozL10n.get('network-error-message'));
+      activity.postResult(false);
+    }
+
+    if (!navigator.onLine) {
+      return onOffline();
+    }
+
+    window.addEventListener('offline', onOffline);
+
     var request;
     var loading = document.getElementById('loading');
     var cancel = document.getElementById('cancel');
@@ -76,6 +88,11 @@
 
           Suggestions.load(categories).then(
             function select(selected) {
+              // We can't cancel out of this for the time being.
+              document.querySelector('menu').style.display = 'none';
+              // Display spinner while we're resolving and creating the
+              // collections.
+              loading.style.display = 'inline';
               eme.log('resolved with', selected);
               var dataReady;
 
@@ -95,7 +112,6 @@
                           function each(app) {
                             return app.icon;
                         });
-
                       var collection = new QueryCollection({
                         query: selected,
                         webicons: webicons
@@ -131,17 +147,51 @@
                 });
 
                 Promise.all(iconsReady).then(function then() {
-                  // TOOD
-                  // better use colleciton.save instead but it calles db.put
-                  // not sure if `put` works for new objects
-                  var trxs = collections.map(CollectionsDatabase.add);
-                  Promise.all(trxs).then(
-                    postResultIds.bind(null, collections), postResultIds);
+                  // Save the collections
+                  function saveAll(collections) {
+                    var trxs = collections.map(collection => {
+                      return collection.save('add');
+                    });
+                    return trxs;
+                  }
+
+                  // XXX: We currently need to save before we populate info.
+                  Promise.all(saveAll(collections))
+                  .then(populateNativeInfo.bind(null, collections))
+                  .then(generateIcons.bind(null, collections))
+                  .then(() => {
+                    return Promise.all(saveAll(collections));
+                  })
+                  .then(postResultIds.bind(null, collections), postResultIds);
                 }).catch(function _catch(ex) {
                   eme.log('caught exception', ex);
                   activity.postResult(false);
                 });
               });
+
+              function populateNativeInfo(collections) {
+                var nativeTasks = [];
+                collections.forEach(collection => {
+                  nativeTasks.push(NativeInfo.processCollection(collection));
+                });
+                return Promise.all(nativeTasks);
+              }
+
+              function generateIcons(collections) {
+                var iconTasks = [];
+                collections.forEach(collection => {
+                  var promise =
+                    getBackground(collection, maxIconSize)
+                    .then(function setBackground(bgObject) {
+                      collection.background = bgObject;
+                      return collection.renderIcon();
+                    }, function noBackground() {
+                      return collection.renderIcon();
+                    });
+                  iconTasks.push(promise);
+                });
+                return Promise.all(iconTasks);
+              }
 
               /**
                * Return from the activity to the homescreen. Create a list of
@@ -150,7 +200,6 @@
                */
               function postResultIds(collections) {
                 collections = collections || [];
-
                 // Generate an array of collection IDs.
                 var ids = collections.map(c => c.id);
 
