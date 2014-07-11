@@ -1,6 +1,6 @@
 Data manager
 ============
 
-.. autoclass:: gaiatest.gaia_test.GaiaData
+.. autoclass:: gaiatest.gaia_test.GaiaDataManager
    :members:
    :undoc-members:
