@@ -179,7 +179,7 @@
   ActivityWindow.prototype.view = function acw_view() {
     this.instanceID = this.CLASS_NAME + '_' + _id++;
     return '<div class="appWindow activityWindow inline-activity' +
-            '" id=' + this.instanceID + '">' +
+            '" id="' + this.instanceID + '">' +
             '<div class="titlebar">' +
             ' <div class="notifications-shadow"></div>' +
             '</div>' +

@@ -10,6 +10,7 @@
   const DEFAULT_ICON = 'url("/style/images/appic_developer.png")';
   const DEFAULT_BGCOLOR = 'rgba(0, 0, 0, 0.5)';
   const DEFAULT_BGCOLOR_ARRAY = [0, 0, 0, 0.5];
+  const CARDLIST_LEFT_MARGIN = 6.8;
 
   function Home() {}
 
@@ -52,15 +53,16 @@
       this.searchBar.on('shown', this.onSearchBarShown.bind(this));
       this.searchBar.on('hidden', this.onSearchBarHidden.bind(this));
 
-      this.messageHandler = new MessageHandler();
-      this.messageHandler.init(this);
-
       this.cardManager.getCardList().then(function(cardList) {
+        that.messageHandler = new MessageHandler();
+        that.messageHandler.init(that);
+
         that._createCardList(cardList);
         that.cardScrollable = new XScrollable({
                 frameElem: 'card-list-frame',
                 listElem: 'card-list',
-                itemClassName: 'app-button'}),
+                itemClassName: 'app-button',
+                leftMargin: CARDLIST_LEFT_MARGIN}),
         that.navigableScrollable = [that.cardScrollable];
         var collection = that.getNavigateElements();
 
@@ -85,8 +87,6 @@
                                     that.handleScrollableItemUnfocus.bind(that);
         that.navigableScrollable.forEach(function(scrollable) {
           scrollable.on('focus', handleScrollableItemFocusBound);
-        });
-        that.navigableScrollable.forEach(function(scrollable) {
           scrollable.on('unfocus', handleScrollableItemUnfocusBound);
         });
 
@@ -172,6 +172,44 @@
       }
     },
 
+    createWave: function(cardButton, card) {
+
+      // deck's icon using gaia font
+      var deckIcon = document.createElement('span');
+      deckIcon.className = 'icon';
+      deckIcon.dataset.icon = card.deckClass;
+
+      // front wave of a deck
+      var waveFront = document.createElement('div');
+      waveFront.className = 'deck-wave';
+      waveFront.classList.add('wave-front');
+      waveFront.classList.add(card.deckClass + '-wave-front');
+      waveFront.classList.add('wave-paused');
+
+      // back wave of a deck
+      var waveBack = document.createElement('div');
+      waveBack.className = 'deck-wave';
+      waveBack.classList.add('wave-back');
+      waveBack.classList.add(card.deckClass + '-wave-back');
+      waveBack.classList.add('wave-paused');
+
+      // run the animation after the deck finishing focus transition
+      cardButton.addEventListener('focus', function(evt) {
+          waveBack.classList.remove('wave-paused');
+          waveFront.classList.remove('wave-paused');
+      });
+
+      cardButton.addEventListener('blur', function(evt) {
+          waveBack.classList.add('wave-paused');
+          waveFront.classList.add('wave-paused');
+      });
+
+      cardButton.appendChild(waveBack);
+      cardButton.appendChild(deckIcon);
+      cardButton.appendChild(waveFront);
+      cardButton.classList.add('deck-' + card.deckClass);
+    },
+
     _fillCardIcon: function(cardButton, card) {
       var manifestURL = card.nativeApp && card.nativeApp.manifestURL;
       var that = this;
@@ -180,7 +218,7 @@
         this._setCardIcon(cardButton, card, card.thumbnail,
                           card.backgroundColor);
         // TODO add backgroundColor??? How to do it???
-      } else if (!card.cachedIconBlob && !card.cachedIconURL) {
+      } else if (!card.cachedIconBlob) {
         // We don't have cachedIconBlob, just get icon from app
         this.cardManager.getIconBlob({
           manifestURL: manifestURL,
@@ -209,11 +247,6 @@
         // We already have cacedIconBlob which is created by previous step.
         this._setCardIcon(cardButton, card, card.cachedIconBlob,
                           card.backgroundColor);
-      } else if (card.cachedIconURL) {
-        // the pre-set icon.
-        cardButton.classList.add('fullsized');
-        cardButton.style.backgroundImage =
-          'url("' + card.cachedIconURL + '")';
       }
     },
 
@@ -280,7 +313,7 @@
         this._fillCardIcon(cardButton, card);
       } else if (card instanceof Deck) {
         cardButton.setAttribute('app-type', 'deck');
-        this._fillCardIcon(cardButton, card);
+        this.createWave(cardButton, card);
       } else if (card instanceof Folder) {
         cardButton.setAttribute('app-type', 'folder');
         cardButton.dataset.icon = 'folder';

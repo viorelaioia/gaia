@@ -132,6 +132,18 @@ suite('system/AppChrome', function() {
       assert.isTrue(stubSelectOne.called);
     });
 
+    test('app ssl state is changed', function() {
+      var app = new AppWindow(fakeWebSite);
+      this.sinon.stub(app, 'getSSLState', function() {
+        return 'broken';
+      });
+      var chrome = new AppChrome(app);
+      var stubHandleSecurityChanged =
+        this.sinon.spy(chrome, 'handleSecurityChanged');
+      chrome.handleEvent({ type: '_securitychange' });
+      assert.isTrue(stubHandleSecurityChanged.called);
+      assert.equal(chrome.title.dataset.ssl, 'broken');
+    });
   });
 
   suite('Views', function() {
@@ -303,13 +315,23 @@ suite('system/AppChrome', function() {
       app.config.chrome.bar = false;
       var chrome = new AppChrome(app);
       chrome.containerElement.classList.add('scrollable');
-      chrome.handleEvent({ type: 'mozbrowsererror' });
+      chrome.handleEvent({ type: 'mozbrowsererror', detail: {
+        type: 'offline'
+      }});
       assert.isFalse(chrome.containerElement.classList.contains('scrollable'));
       assert.isTrue(chrome.element.classList.contains('maximized'));
 
       chrome.element.classList.remove('maximized');
+      chrome.handleEvent({ type: 'mozbrowsererror', detail: {
+        type: 'fatal'
+      }});
+      assert.isFalse(chrome.element.classList.contains('maximized'));
+
+      chrome.element.classList.remove('maximized');
       app.config.chrome.bar = true;
-      chrome.handleEvent({ type: 'mozbrowsererror' });
+      chrome.handleEvent({ type: 'mozbrowsererror', detail: {
+        type: 'offline'
+      }});
       assert.isFalse(chrome.element.classList.contains('maximized'));
     });
   });

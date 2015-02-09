@@ -6,7 +6,7 @@
   var Deck = function Deck(options) {
     this.nativeApp = options.nativeApp;
     this.name = options.name;
-    this.cachedIconURL = options.cachedIconURL;
+    this.deckClass = options.deckClass;
     this.group = options.group;
     Card.prototype.constructor.call(this);
   };
@@ -18,7 +18,7 @@
         name: cardEntry.name,
         nativeApp: cardEntry.manifestURL &&
           installedApps[cardEntry.manifestURL],
-        cachedIconURL: cardEntry.cachedIconURL,
+        deckClass: cardEntry.deckClass,
         group: cardEntry.group
       });
     }
@@ -50,7 +50,7 @@
     // icon. If not, it is an issue from visual's image.
     return {
       name: this.name,
-      cachedIconURL: this.cachedIconURL,
+      deckClass: this.deckClass,
       manifestURL: this.nativeApp && this.nativeApp.manifestURL,
       type: 'Deck',
       group: this.group

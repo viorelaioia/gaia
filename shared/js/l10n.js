@@ -1122,7 +1122,7 @@
   }
 
   var bindingsIO = {
-    extra: function(id, ver, path, type, callback, errback, sync) {
+    extra: function(id, ver, path, type, callback, errback) {
       if (type === 'properties') {
         type = 'text';
       }
@@ -1181,8 +1181,12 @@
     }
 
     var idToFetch = this.isPseudo ? ctx.defaultLocale : this.id;
-    var source = navigator.mozL10n._config.localeSources[this.id] || 'app';
-    var gaiaVersion = navigator.mozL10n._config.gaiaVersion;
+    var gaiaVersion = null;
+    var source = 'app';
+    if (typeof(navigator) !== 'undefined') {
+      source = navigator.mozL10n._config.localeSources[this.id] || 'app';
+      gaiaVersion = navigator.mozL10n._config.gaiaVersion;
+    }
 
     for (var i = 0; i < ctx.resLinks.length; i++) {
       var resLink = decodeURI(ctx.resLinks[i]);
@@ -1370,12 +1374,21 @@
   // Getting ready
 
   function negotiate(available, requested, defaultLocale) {
-    if (available.indexOf(requested[0]) === -1 ||
-        requested[0] === defaultLocale) {
-      return [defaultLocale];
-    } else {
-      return [requested[0], defaultLocale];
+    var supportedLocale;
+    // Find the first locale in the requested list that is supported.
+    for (var i = 0; i < requested.length; i++) {
+      var locale = requested[i];
+      if (available.indexOf(locale) !== -1) {
+        supportedLocale = locale;
+        break;
+      }
     }
+    if (!supportedLocale ||
+        supportedLocale === defaultLocale) {
+      return [defaultLocale];
+    }
+
+    return [supportedLocale, defaultLocale];
   }
 
   function freeze(supported) {
@@ -1653,20 +1666,27 @@
       }
     }
 
+    var additionalLanguagesPromise;
+
     if (navigator.mozApps && navigator.mozApps.getAdditionalLanguages) {
       // if the environment supports langpacks, register extra languages…
-      navigator.mozApps.getAdditionalLanguages().then(function(extraLangs) {
-        registerLocales.call(this, meta, extraLangs);
-        initLocale.call(this);
-      }.bind(this));
+      additionalLanguagesPromise =
+        navigator.mozApps.getAdditionalLanguages().catch(function(e) {
+          console.error('Error while loading getAdditionalLanguages', e);
+        });
+
       // …and listen to langpacks being added and removed
       document.addEventListener('additionallanguageschange', function(evt) {
         registerLocales.call(this, meta, evt.detail);
       }.bind(this));
     } else {
-      registerLocales.call(this, meta);
-      initLocale.call(this);
+      additionalLanguagesPromise = Promise.resolve();
     }
+
+    additionalLanguagesPromise.then(function(extraLangs) {
+      registerLocales.call(this, meta, extraLangs);
+      initLocale.call(this);
+    }.bind(this));
   }
 
   function registerLocales(meta, extraLangs) {

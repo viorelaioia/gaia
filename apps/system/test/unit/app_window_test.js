@@ -633,8 +633,10 @@ suite('system/AppWindow', function() {
 
   suite('ScreenshotOverlay State Control', function() {
     var app1;
+    var app2;
     setup(function() {
       app1 = new AppWindow(fakeAppConfig1);
+      app2 = new AppWindow(fakeAppConfig2);
       // Inject mozBrowser API to app iframe
       injectFakeMozBrowserAPI(app1.browser.element);
     });
@@ -680,6 +682,24 @@ suite('system/AppWindow', function() {
       assert.isTrue(app1.screenshotOverlay.classList.contains('visible'));
     });
 
+    test('show the frontest app ScreenshotOverlay', function() {
+      app1.frontWindow = app2;
+      this.sinon.stub(app2, 'isActive').returns(true);
+      var stubRequestScreenshotURL =
+        this.sinon.stub(app2, 'requestScreenshotURL');
+      app1._showScreenshotOverlay();
+      assert.isTrue(stubRequestScreenshotURL.called);
+      assert.isTrue(app2.screenshotOverlay.classList.contains('visible'));
+    });
+
+    test('should not show the frontest app ScreenshotOverlay if it is ' +
+         'not active', function() {
+      app1.frontWindow = app2;
+      this.sinon.stub(app2, 'isActive').returns(false);
+      app1._showScreenshotOverlay();
+      assert.isFalse(app2.screenshotOverlay.classList.contains('visible'));
+    });
+
     test('hideScreenshotOverlay', function() {
       app1.screenshotOverlay.classList.add('visible');
       app1.element.classList.add('overlay');
@@ -689,6 +709,23 @@ suite('system/AppWindow', function() {
       assert.isTrue(app1.element.classList.contains('overlay'));
       this.sinon.clock.tick(); // We wait for the next tick
       assert.isFalse(app1.element.classList.contains('overlay'));
+    });
+
+    test('hideScreenshotOverlay and its front window', function() {
+      app1.frontWindow = app2;
+      this.sinon.stub(app2, 'isActive').returns(true);
+      app2.screenshotOverlay.classList.add('visible');
+      app1.screenshotOverlay.classList.add('visible');
+      app2.element.classList.add('overlay');
+      app1.element.classList.add('overlay');
+      app1._hideScreenshotOverlay();
+      assert.isFalse(app1.screenshotOverlay.classList.contains('visible'));
+      assert.isFalse(app2.screenshotOverlay.classList.contains('visible'));
+      assert.isTrue(app1.element.classList.contains('overlay'));
+      assert.isTrue(app2.element.classList.contains('overlay'));
+      this.sinon.clock.tick(); // We wait for the next tick
+      assert.isFalse(app1.element.classList.contains('overlay'));
+      assert.isFalse(app2.element.classList.contains('overlay'));
     });
 
     test('hideScreenshotOverlay noop when the screenshot is not displayed',
@@ -981,15 +1018,12 @@ suite('system/AppWindow', function() {
     test('MozBrowser API: simple methods', function() {
       var app1 = new AppWindow(fakeAppConfig1);
       injectFakeMozBrowserAPI(app1.browser.element);
-      var stubFocus = this.sinon.stub(app1.browser.element, 'focus');
       var stubBlur = this.sinon.stub(app1.browser.element, 'blur');
       var stubBack = this.sinon.stub(app1.browser.element, 'goBack');
       var stubForward = this.sinon.stub(app1.browser.element, 'goForward');
       var stubReload = this.sinon.stub(app1.browser.element, 'reload');
       var stubStop = this.sinon.stub(app1.browser.element, 'stop');
 
-      app1.focus();
-      assert.isTrue(stubFocus.called);
       app1.blur();
       assert.isTrue(stubBlur.called);
       app1.back();
@@ -1000,6 +1034,37 @@ suite('system/AppWindow', function() {
       assert.isTrue(stubReload.called);
       app1.stop();
       assert.isTrue(stubStop.called);
+    });
+
+    suite('focus', function() {
+      var app1;
+      var stubFocus;
+
+      setup(function() {
+        app1 = new AppWindow(fakeAppConfig1);
+        injectFakeMozBrowserAPI(app1.browser.element);
+        stubFocus = this.sinon.stub(app1.browser.element, 'focus');
+      });
+
+      teardown(function() {
+        stubFocus.restore();
+        app1.contextmenu = undefined;
+      });
+
+      test('Context menu is not shown', function() {
+        app1.focus();
+        assert.isTrue(stubFocus.called);
+      });
+
+      test('Context menu is shown', function() {
+        app1.contextmenu = {
+          isShown: function() {
+            return true;
+          }
+        };
+        app1.focus();
+        assert.isFalse(stubFocus.called);
+      });
     });
 
     test('MozBrowser API: getScreenshot', function() {
@@ -1652,8 +1717,10 @@ suite('system/AppWindow', function() {
 
       var chromeEventSpy = this.sinon.stub(AppChrome.prototype, 'handleEvent');
 
+      app1.inError = true;
       app1.element.dispatchEvent(new CustomEvent('_opened'));
 
+      sinon.assert.calledWith(chromeEventSpy, {type: 'mozbrowsererror'});
       sinon.assert.calledWith(chromeEventSpy, {type: 'mozbrowserloadstart'});
       sinon.assert.calledWith(chromeEventSpy, {type: '_loading'});
     });
@@ -2039,6 +2106,27 @@ suite('system/AppWindow', function() {
       assert.isTrue(stubSetVisible.calledWith(true), 'setVisible');
       assert.isTrue(stubBroadcast.calledWith('focus'));
     });
+
+    test('browsersecuritychange event', function() {
+      var app1 = new AppWindow(fakeAppConfig1);
+      // expect indeterminate state before first event
+      var publishStub = this.sinon.stub(app1, 'publish');
+      assert.equal(app1.getSSLState(), '',
+                  'SSL state is empty before the first security change');
+
+
+      ['broken', 'secure', 'insecure'].forEach(function(state, i) {
+        app1.handleEvent({
+          type: 'mozbrowsersecuritychange',
+          detail: {
+            'state': state
+          }
+        });
+        assert.equal(app1.getSSLState(), state);
+        assert.equal(publishStub.getCall(i).args[0], 'securitychange');
+        assert.equal(publishStub.getCall(i).args[1], state);
+      });
+    });
   });
 
   test('Change URL at run time', function() {
@@ -2082,6 +2170,7 @@ suite('system/AppWindow', function() {
     assert.isNull(app1.iframe);
     assert.isTrue(app1.suspended);
     assert.isTrue(stubPublish.calledWith('suspended'));
+    assert.equal(app1._sslState, '');
   });
 
   test('set child window', function() {

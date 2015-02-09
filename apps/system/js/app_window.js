@@ -418,6 +418,7 @@
     this.browserContainer.removeChild(this.browser.element);
     this.browser = null;
     this.iframe = null;
+    this._sslState = '';
     this.publish('suspended');
   };
 
@@ -761,6 +762,7 @@
      'mozbrowserloadend', 'mozbrowseractivitydone', 'mozbrowserloadstart',
      'mozbrowsertitlechange', 'mozbrowserlocationchange',
      'mozbrowsermetachange', 'mozbrowsericonchange', 'mozbrowserasyncscroll',
+     'mozbrowsersecuritychange',
      '_localized', '_swipein', '_swipeout', '_kill_suspended',
      '_orientationchange', '_focus', '_blur',  '_hidewindow', '_sheetdisplayed',
      '_sheetsgestureend', '_cardviewbeforeshow', '_cardviewclosed',
@@ -1234,6 +1236,10 @@
    */
   AppWindow.prototype._showScreenshotOverlay =
     function aw__showScreenshotOverlay() {
+      if (this.frontWindow && this.frontWindow.isActive()) {
+        this.frontWindow._showScreenshotOverlay();
+        return;
+      }
       if (!this.screenshotOverlay ||
           this.screenshotOverlay.classList.contains('visible')) {
         return;
@@ -1256,6 +1262,9 @@
    */
   AppWindow.prototype._hideScreenshotOverlay =
     function aw__hideScreenshotOverlay() {
+      if (this.frontWindow && this.frontWindow.isActive()) {
+        this.frontWindow._hideScreenshotOverlay();
+      }
       if (!this.screenshotOverlay ||
           !this.screenshotOverlay.classList.contains('visible')) {
         return;
@@ -2264,6 +2273,29 @@
     }
     this.setVisible(false);
   };
+
+
+  /**
+   *  Track current SSL state of the browser.
+   */
+  AppWindow.prototype._sslState = '';
+
+  /**
+   * Handle mozbrowsersecuritychange events from the browser
+   */
+  AppWindow.prototype._handle_mozbrowsersecuritychange =
+    function aw__handle_mozbrowsersecuritychange(evt) {
+      var state = this._sslState = evt.detail.state;
+      this.publish('securitychange', state);
+    };
+
+  /**
+   * Get the current SSL state for the browser
+   */
+  AppWindow.prototype.getSSLState = function() {
+    return this._sslState;
+  };
+
 
   /**
    * Statusbar will bypass touch event to us via this method

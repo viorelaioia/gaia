@@ -5,11 +5,31 @@
   /* globals LazyLoader */
   /* globals SearchProvider */
 
+  var suggestionsProvider = document.getElementById('suggestions-provider');
+  var suggestionsSelect = document.getElementById('suggestions-select');
+
   SearchProvider.providerUpdated(function() {
-    var elem = document.getElementById('suggestion-provider');
-    navigator.mozL10n.setAttributes(elem, 'search-header', {
+
+    navigator.mozL10n.setAttributes(suggestionsProvider, 'search-header', {
       provider: SearchProvider('title').toUpperCase()
     });
+
+    var providers = SearchProvider.providers();
+    var selectFragment = document.createDocumentFragment();
+    var optionNode = document.createElement('option');
+
+    Object.keys(providers).forEach(provider => {
+      var option = optionNode.cloneNode();
+      option.value = provider;
+      option.text = providers[provider].title;
+      if (provider === SearchProvider.selected()) {
+        option.selected = true;
+      }
+      selectFragment.appendChild(option);
+    });
+
+    suggestionsSelect.innerHTML = '';
+    suggestionsSelect.appendChild(selectFragment);
   });
 
   function encodeTerms(str, search) {
@@ -28,6 +48,9 @@
 
     init: function() {
       Provider.prototype.init.apply(this, arguments);
+      suggestionsSelect.addEventListener('change', function(e) {
+        SearchProvider.setProvider(e.target.value);
+      });
     },
 
     click: function(e) {
@@ -37,13 +60,15 @@
     },
 
     search: function(input) {
-      return new Promise((resolve, reject) => {
-        var url = encodeTerms(SearchProvider('suggestUrl'), input);
-        LazyLoader.getJSON(url, true).then(result => {
-          var results = result[1];
-          // We add an item to search the entered term as well
-          results.unshift(result[0]);
-          resolve(results);
+      return SearchProvider.ready().then(() => {
+        return new Promise((resolve, reject) => {
+          var url = encodeTerms(SearchProvider('suggestUrl'), input);
+          LazyLoader.getJSON(url, true).then(result => {
+            var results = result[1];
+            // We add an item to search the entered term as well
+            results.unshift(result[0]);
+            resolve(results);
+          });
         });
       });
     },

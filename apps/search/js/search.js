@@ -8,8 +8,11 @@
   /* global SettingsListener */
   /* global UrlHelper */
   /* global SearchProvider */
+  /* global MozActivity */
+
   // timeout before notifying providers
   var SEARCH_DELAY = 500;
+  var MAX_GRID_SIZE = 4;
 
   window.Search = {
 
@@ -17,12 +20,16 @@
 
     providers: {},
 
+    gridCount: 0,
+
     searchResults: document.getElementById('search-results'),
 
     offlineMessage: document.getElementById('offline-message'),
     settingsConnectivity: document.getElementById('settings-connectivity'),
     suggestionsWrapper: document.getElementById('suggestions-wrapper'),
     loadingElement: document.getElementById('loading'),
+    grid: document.getElementById('icons'),
+    gridWrapper: document.getElementById('icons-wrapper'),
 
     suggestionsEnabled: false,
 
@@ -31,7 +38,9 @@
      * on first use
      */
     suggestionNotice: document.getElementById('suggestions-notice-wrapper'),
-    toShowNotice: false,
+    settingsLink: document.getElementById('settings-link'),
+
+    toShowNotice: null,
     NOTICE_KEY: 'notice-shown',
 
     init: function() {
@@ -84,9 +93,8 @@
     },
 
     resize: function() {
-      var grid = document.getElementById('icons');
-      if (grid && grid.render) {
-        grid.render({
+      if (this.grid && this.grid.render) {
+        this.grid.render({
           rerender: true,
           skipDivider: true
         });
@@ -132,6 +140,7 @@
 
           // If suggestions are disabled, only use local providers
           if (this.suggestionsEnabled || !provider.remote) {
+
             if (provider.remote) {
               // Do not send full URLs to remote providers
               // or when inside a private browser.
@@ -143,14 +152,16 @@
               this.loadingElement.classList.add('loading');
             }
 
-            provider.search(input).then((results) => {
-              if (provider.name === 'Suggestions') {
-                var shown = (input.length > 2 &&
-                             results.length &&
-                             this.toShowNotice);
-                this.suggestionNotice.hidden = !shown;
+            if (provider.name === 'Suggestions') {
+              var toShow = input.length > 2 &&
+                this.toShowNotice &&
+                this.suggestionNotice.hidden;
+              if (toShow) {
+                this.suggestionNotice.hidden = false;
               }
+            }
 
+            provider.search(input).then((results) => {
               this.collect(provider, results);
             }).catch((err) => {
               if (provider.remote) {
@@ -169,14 +180,30 @@
     initNotice: function() {
 
       var confirm = document.getElementById('suggestions-notice-confirm');
-
       confirm.addEventListener('click', this.discardNotice.bind(this, true));
+
+      if (this.settingsLink) {
+        this.settingsLink
+          .addEventListener('click', this.openSettings.bind(this));
+      }
 
       asyncStorage.getItem(this.NOTICE_KEY, function(value) {
         if (this.toShowNotice === null) {
           this.toShowNotice = !value;
         }
       }.bind(this));
+    },
+
+    openSettings: function() {
+      this.discardNotice();
+      /* jshint nonew: false */
+      new MozActivity({
+        name: 'configure',
+        data: {
+          target: 'device',
+          section: 'search'
+        }
+      });
     },
 
     discardNotice: function(focus) {
@@ -204,27 +231,30 @@
      * @param {Array} results The results of the provider search.
      */
     collect: function(provider, results) {
-
       if (provider.remote) {
         this.loadingElement.classList.remove('loading');
       }
 
-      if (!provider.dedupes) {
-        provider.render(results);
-        return;
+      if (provider.dedupes) {
+        results = this.dedupe.reduce(results, provider.dedupeStrategy);
       }
 
-      results = this.dedupe.reduce(results, provider.dedupeStrategy);
-      provider.render(results);
-
-      if (provider.grid) {
-        var childNodes = provider.grid.childNodes;
-        if (childNodes.length) {
-          var item = childNodes[childNodes.length - 1];
-          var rect = item.getBoundingClientRect();
-          provider.grid.style.height = rect.bottom + 'px';
+      if (provider.isGridProvider &&
+        (results.length + this.gridCount) > MAX_GRID_SIZE) {
+        var spaces = MAX_GRID_SIZE - this.gridCount;
+        if (spaces < 1) {
+          this.abort();
+          return;
         }
+        results.splice(spaces, (results.length - spaces));
       }
+
+      if (provider.isGridProvider) {
+        this.gridCount += results.length;
+      }
+  
+      this.gridWrapper.classList.toggle('hidden', !this.gridCount);
+      provider.render(results);
     },
 
     /**
@@ -255,14 +285,14 @@
     },
 
     /**
-     * Called when the user submits the search form
+     * Clear results from each provider.
      */
     clear: function(msg) {
       this.abort();
       for (var i in this.providers) {
         this.providers[i].clear();
       }
-
+      this.gridCount = 0;
       this.suggestionNotice.hidden = true;
     },
 
